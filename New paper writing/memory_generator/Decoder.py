@@ -276,7 +276,7 @@ class DecoderRNN(BaseRNN):
         return new_beam, torch.LongTensor(next_inp).to(self.device).view(-1, 1), results, \
                torch.cat(new_decoder_hidden, 0).unsqueeze(0), torch.cat(new_cov_ref, 0), torch.cat(new_cov_mem, 0)
 
-    # Beam Search Decoding
+    # Beam Search Decoding:波束搜索，消除重复
     def decode(self, max_source_oov=0, sources_ids=None, enc_mask=None, encoder_hidden=None, encoder_outputs=None,
                term_id=None, term_mask=None, term_output=None, stopwords=None, sflag=False):
         # print(encoder_outputs.size())
