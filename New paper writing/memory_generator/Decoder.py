@@ -246,8 +246,8 @@ class DecoderRNN(BaseRNN):
         cov_mem += term_attn
         # return top-k values i.e. top-k over all beams i.e. next step input ids
         # return hidden, cell states corresponding to topk
-        probs, inds = vocab_probs.topk(k=self.beam_size, dim=1)
-        probs = probs.log()
+        probs, inds = vocab_probs.topk(k=self.beam_size, dim=1) #沿着指定维度返回最大k个数值及其索引值
+        probs = probs.log() # tensor.log() 对数运算
         candidates = []
         assert len(all_hyps) == probs.size(0), '# Hypothesis and log-prob size dont match'
         # cycle through all hypothesis in full beam
