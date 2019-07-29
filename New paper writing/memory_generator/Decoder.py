@@ -69,11 +69,11 @@ class DecoderRNN(BaseRNN):
         term_context = term_context.squeeze(0)
 
         # output proj calculation
-        p_vocab = F.softmax(self.V(torch.cat((_h, ref_context, term_context), 1)), dim=1)
+        p_vocab = F.softmax(self.V(torch.cat((_h, ref_context, term_context), 1)), dim=1) # torch.cat是将两个张量（tensor）拼接在一起,0行1列
 
         # pgen
         # print(embed_target.size())
-        p_gen = torch.sigmoid(self.w_p(torch.cat((_h, embed_target), 1)))
+        p_gen = torch.sigmoid(self.w_p(torch.cat((_h, embed_target), 1))) 
         p_ref = torch.sigmoid(self.w_h(torch.cat((ref_context, term_context), 1)))
 
         weighted_Pvocab = p_vocab * p_gen
@@ -90,7 +90,7 @@ class DecoderRNN(BaseRNN):
             combined_vocab = weighted_Pvocab
         del weighted_Pvocab
         # scatter article word probs to combined vocab prob.
-        combined_vocab = combined_vocab.scatter_add(1, sources_ids, weighted_ref_attn)
+        combined_vocab = combined_vocab.scatter_add(1, sources_ids, weighted_ref_attn) # a.scatter_add(dim,index,b) 该函数将 b 的所有值加到 a 中，加入位置由 index 指明
         combined_vocab = combined_vocab.scatter_add(1, term_id, weighted_term_attn)
 
         return combined_vocab, ref_attn, term_attn
@@ -114,8 +114,10 @@ class DecoderRNN(BaseRNN):
         # memory initialization
         decoder_hidden, _ = self.memory_init(decoder_hidden, term_output, term_mask)
         # print(encoder_outputs.size())
+        # 有些tensor并不是占用一整块内存，而是由不同的数据块组成，而tensor的view()操作依赖于内存是整块的，这时只需要执行contiguous()这个函数，把tensor变成在内存中连续分布的形式
+        # tensor.contiguous().view() = torch.reshape()
         enc_proj = self.Wih(encoder_outputs.contiguous().view(batch_size * max_enc_len, -1)).view(batch_size,
-                                                                                                  max_enc_len, -1)
+                                                                                                  max_enc_len, -1) 
         if teacher_forcing_ratio:
             embedded = self.embedding(targets)
             embed_targets = self.input_dropout(embedded)
@@ -133,6 +135,9 @@ class DecoderRNN(BaseRNN):
                                 encoder_outputs, embed_target,
                                 max_source_oov, term_output, term_id, term_mask)
                 # mask the output to account for PAD , cov_ref
+                # 当我们再训练网络的时候可能希望保持一部分的网络参数不变，只对其中一部分的参数进行调整；
+                # 或者值训练部分分支网络，并不让其梯度对主网络的梯度造成影响，这时候我们就需要使用detach()函数来切断一些分支的反向传播
+                # 返回一个新的Variable，从当前计算图中分离下来的，但是仍指向原变量的存放位置,不同之处只是requires_grad为false，得到的这个Variable永远不需要计算其梯度，不具有grad。
                 target_mask_0 = target_id.ne(0).detach()
                 output = combined_vocab.gather(1, target_id).add_(sys.float_info.epsilon)
                 lm_loss.append(output.log().mul(-1) * target_mask_0.float())
@@ -142,13 +147,13 @@ class DecoderRNN(BaseRNN):
 
                 # Coverage Loss
                 # take minimum across both attn_scores and coverage
-                _cov_loss_ref, _ = torch.stack((cov_ref, ref_attn), 2).min(2)
+                _cov_loss_ref, _ = torch.stack((cov_ref, ref_attn), 2).min(2) # stack 增加维度
                 _cov_loss_mem, _ = torch.stack((cov_mem, term_attn), 2).min(2)
                 cov_loss.append(_cov_loss_ref.sum(1) + _cov_loss_mem.sum(1))
                 # print(cov_loss_ref[-1].size())
                 # cov_loss_mem.append(_)
             total_masked_loss = torch.cat(lm_loss, 1).sum(1).div(dec_lens) + self.lmbda * torch.stack(cov_loss, 1)\
-                .sum(1).div(dec_lens) / 2.0
+                .sum(1).div(dec_lens) / 2.0 # div 除
             return total_masked_loss
         else:
             return self.evaluate(targets, batch_size, max_length, max_source_oov, encoder_outputs, decoder_hidden,
