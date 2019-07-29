@@ -69,7 +69,7 @@ class DecoderRNN(BaseRNN):
         term_context = term_context.squeeze(0)
 
         # output proj calculation
-        p_vocab = F.softmax(self.V(torch.cat((_h, ref_context, term_context), 1)), dim=1) # torch.cat是将两个张量（tensor）拼接在一起,0行1列
+        p_vocab = F.softmax(self.V(torch.cat((_h, ref_context, term_context), 1)), dim=1) # torch.cat是将两个张量（tensor）拼接在一起,0行1列 # 对n维输入张量运用Softmax函数，将张量的每个元素缩放到（0,1）区间且和为1
 
         # pgen
         # print(embed_target.size())
