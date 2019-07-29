@@ -51,18 +51,18 @@ class DecoderRNN(BaseRNN):
                     encoder_outputs, embed_target, max_source_oov, term_output, term_id, term_mask): #
 
         # reference attention
-        dec_proj = self.Ws(_h).unsqueeze(1).expand_as(enc_proj)
+        dec_proj = self.Ws(_h).unsqueeze(1).expand_as(enc_proj) # unsqueeze：返回一个新的张量，对输入的指定位置插入维度1 # expand_as(tensor) 将tensor扩展为参数tensor的大小
         # print('decoder proj', dec_proj.size())
-        cov_proj = self.Wc(cov_ref.view(-1, 1)).view(batch_size, max_enc_len, -1)
+        cov_proj = self.Wc(cov_ref.view(-1, 1)).view(batch_size, max_enc_len, -1)  # view(*args): 返回一个有相同数据但大小不同的tensor (reshape)
         # print('cov proj', cov_proj.size())
-        e_t = self.vt(torch.tanh(enc_proj + dec_proj + cov_proj).view(batch_size*max_enc_len, -1))
+        e_t = self.vt(torch.tanh(enc_proj + dec_proj + cov_proj).view(batch_size*max_enc_len, -1)) #tanh：激励函数
         # mask to -INF before applying softmax
         ref_attn = e_t.view(batch_size, max_enc_len)
         del e_t
-        ref_attn.data.masked_fill_(enc_mask.data.byte(), 0) # float('-inf')
+        ref_attn.data.masked_fill_(enc_mask.data.byte(), 0) # float('-inf')  # masked_fill_(mask, value): 在mask值为1的位置处用value填充
         ref_attn = F.softmax(ref_attn, dim=1)
 
-        ref_context = self.Wr(ref_attn.unsqueeze(1).bmm(encoder_outputs).squeeze(1))
+        ref_context = self.Wr(ref_attn.unsqueeze(1).bmm(encoder_outputs).squeeze(1)) # torch.bmm(batch1, batch2, out=None):对存储在两个批batch1和batch2内的矩阵进行批矩阵乘操作
 
         # terms attention
         term_context, term_attn = self.memory(_h.unsqueeze(0), term_output, term_mask, cov_mem)
