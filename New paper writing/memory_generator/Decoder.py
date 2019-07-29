@@ -199,6 +199,7 @@ class DecoderRNN(BaseRNN):
         h = torch.cat([h[0:h.size(0):2], h[1:h.size(0):2]], 2)
         return h
 
+    # 验证参数/推理参数
     def _validate_args(self, targets, encoder_hidden, encoder_outputs, teacher_forcing_ratio):
         if encoder_outputs is None:
             raise ValueError("Argument encoder_outputs cannot be None when attention is used.")
